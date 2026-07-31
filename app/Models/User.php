@@ -4,9 +4,14 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Privilege;
+use App\Models\Role;
 
 class User extends Authenticatable
 {
@@ -106,5 +111,43 @@ class User extends Authenticatable
     public function getAuthPassword()
     {
         return $this->password_hash;
+    }
+
+    public function role(): BelongsTo
+    {
+        // If mst_user has a direct role_id column, use this relation.
+        return $this->belongsTo(Role::class, 'role_id', 'role_id');
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'map_user_role',
+            'user_id',
+            'role_id'
+        );
+    }
+
+    public function getPrivilegesAttribute(): Collection
+    {
+        if (! $this->relationLoaded('roles')) {
+            $this->load('roles.privileges');
+        }
+
+        return $this->roles
+            ->flatMap(fn(Role $role) => $role->privileges)
+            ->unique('privilege_id')
+            ->values();
+    }
+
+    public function getRoleNamesAttribute(): string
+    {
+        return $this->roles->pluck('role_name')->join(', ');
+    }
+
+    public function getPrivilegeNamesAttribute(): string
+    {
+        return $this->privileges->pluck('privilege_name')->join(', ');
     }
 }
