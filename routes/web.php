@@ -28,4 +28,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Local debug route to return the authenticated user's row (hidden password hash).
+if (app()->environment('local')) {
+    Route::get('/debug-auth-user', function () {
+        $user = auth()->user();
+        if (! $user) {
+            return response()->json(['user' => null], 401);
+        }
+        return response()->json($user->makeHidden(['password_hash']));
+    })->middleware('auth')->name('debug.auth.user');
+}
+
 require __DIR__.'/auth.php';
