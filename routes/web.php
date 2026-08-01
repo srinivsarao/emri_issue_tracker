@@ -70,3 +70,6 @@ if (app()->environment('local')) {
 }
 
 require __DIR__.'/auth.php';
+
+
+require __DIR__.'/masters.php';
