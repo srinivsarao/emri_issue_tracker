@@ -18,11 +18,41 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::view('/dashboard', 'dashboard')->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+    Route::view('/issues', 'pages.issues')
+        ->middleware('menu.access:issues')
+        ->name('issues');
+
+    Route::view('/raise-issue', 'pages.raise-issue')
+        ->middleware('menu.access:raise.issue')
+        ->name('raise.issue');
+
+    Route::view('/reports', 'pages.reports')
+        ->middleware('menu.access:reports')
+        ->name('reports');
+
+    Route::view('/administration', 'pages.administration')
+        ->middleware('menu.access:administration')
+        ->name('administration');
+
+    Route::view('/central-admin', 'pages.central-admin')
+        ->middleware('menu.access:central.admin')
+        ->name('central.admin');
+
+    Route::view('/state-admin', 'pages.state-admin')
+        ->middleware('menu.access:state.admin')
+        ->name('state.admin');
+
+    Route::view('/ho-admin', 'pages.ho-admin')
+        ->middleware('menu.access:ho.admin')
+        ->name('ho.admin');
+
+    Route::view('/vendor-admin', 'pages.vendor-admin')
+        ->middleware('menu.access:vendor.admin')
+        ->name('vendor.admin');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

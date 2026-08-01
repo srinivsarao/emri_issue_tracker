@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Privilege;
+use App\Models\Menu;
 use Illuminate\Database\Eloquent\Model;
 
 class Role extends Model
@@ -21,13 +21,13 @@ class Role extends Model
         'is_system_role',
     ];
 
-    public function privileges()
+    public function menus()
     {
         return $this->belongsToMany(
-            Privilege::class,
-            'map_role_privilege',
+            Menu::class,
+            'map_role_menu',
             'role_id',
-            'privilege_id'
+            'menu_id'
         )->withPivot('is_allowed');
     }
 }

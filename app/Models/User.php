@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
-use App\Models\Privilege;
+use App\Models\Menu;
 use App\Models\Role;
 
 class User extends Authenticatable
@@ -113,6 +114,11 @@ class User extends Authenticatable
         return $this->password_hash;
     }
 
+    public function getNameAttribute(): ?string
+    {
+        return $this->user_name;
+    }
+
     public function role(): BelongsTo
     {
         // If mst_user has a direct role_id column, use this relation.
@@ -129,25 +135,56 @@ class User extends Authenticatable
         );
     }
 
-    public function getPrivilegesAttribute(): Collection
-    {
-        if (! $this->relationLoaded('roles')) {
-            $this->load('roles.privileges');
-        }
-
-        return $this->roles
-            ->flatMap(fn(Role $role) => $role->privileges)
-            ->unique('privilege_id')
-            ->values();
-    }
-
     public function getRoleNamesAttribute(): string
     {
         return $this->roles->pluck('role_name')->join(', ');
     }
 
-    public function getPrivilegeNamesAttribute(): string
+    public function getMenusAttribute(): Collection
     {
-        return $this->privileges->pluck('privilege_name')->join(', ');
+        if (! $this->relationLoaded('roles')) {
+            $this->load('roles.menus');
+        }
+
+        return $this->roles
+            ->flatMap(fn(Role $role) => $role->menus)
+            ->filter(fn($menu) => $menu->pivot->is_allowed && $menu->is_active)
+            ->unique('menu_id')
+            ->sortBy('display_order')
+            ->values();
+    }
+
+    public function hasMenuAccess(string $routeName): bool
+    {
+        return $this->menus->contains(function ($menu) use ($routeName) {
+            return strtolower($menu->route_name) === strtolower($routeName);
+        });
+    }
+
+    public function getDefaultSectionRouteAttribute(): string
+    {
+        $priorityRoutes = [
+            'central.admin',
+            'state.admin',
+            'ho.admin',
+            'vendor.admin',
+        ];
+
+        foreach ($priorityRoutes as $routeName) {
+            if ($this->hasMenuAccess($routeName) && Route::has($routeName)) {
+                return route($routeName);
+            }
+        }
+
+        return route('dashboard');
+    }
+
+    public function hasRole(string $roleName): bool
+    {
+        $this->loadMissing('roles');
+
+        return $this->roles->contains(function (Role $role) use ($roleName) {
+            return strtolower($role->role_name) === strtolower($roleName);
+        });
     }
 }

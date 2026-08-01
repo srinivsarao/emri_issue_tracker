@@ -39,7 +39,15 @@ if (in_array('map_role_privilege', $roleTables, true)) {
     $result['map_role_privilege'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+if ($pdo->query("SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='mst_privilege'")->fetchColumn()) {
+    $result['mst_privilege_schema'] = $pdo->query('SHOW COLUMNS FROM mst_privilege')->fetchAll(PDO::FETCH_ASSOC);
+    $result['mst_privilege_rows'] = $pdo->query('SELECT * FROM mst_privilege LIMIT 50')->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $stmt = $pdo->query("SELECT TABLE_NAME FROM information_schema.columns WHERE COLUMN_NAME = 'user_id' AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%role%'");
 $result['user_role_tables'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$stmt = $pdo->query("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_NAME LIKE '%menu%'");
+$result['menu_tables'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 file_put_contents('tmp_role_inspect.json', json_encode($result, JSON_PRETTY_PRINT));
