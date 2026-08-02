@@ -46,30 +46,42 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">ABC Logistics</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Logistics</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Ravi Kumar</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-vendor-name="ABC Logistics" data-category="Logistics" data-contact-person="Ravi Kumar" data-status="active" onclick="editVendor(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-200">Disable</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Global Supplies</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Supply Chain</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Sneha Patel</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Inactive</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-vendor-name="Global Supplies" data-category="Supply Chain" data-contact-person="Sneha Patel" data-status="inactive" onclick="editVendor(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">Activate</button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                @forelse($vendors as $vendor)
+                                    <tr>
+                                        <td class="px-5 py-3 text-sm font-semibold text-slate-900">{{ $vendor->vendor_name }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $vendor->category ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $vendor->contact_person ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <span class="rounded-full {{ (int) $vendor->is_active === 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-semibold">
+                                                {{ (int) $vendor->is_active === 1 ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <button type="button"
+                                                    data-vendor-id="{{ $vendor->vendor_id }}"
+                                                    data-vendor-name="{{ $vendor->vendor_name }}"
+                                                    data-category="{{ $vendor->category }}"
+                                                    data-contact-person="{{ $vendor->contact_person }}"
+                                                    data-status="{{ (int) $vendor->is_active === 1 ? 'active' : 'inactive' }}"
+                                                    onclick="editVendor(this.dataset)"
+                                                    class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">
+                                                    Edit
+                                                </button>
+                                                <form method="POST" action="{{ route('vendor.master.toggle', ['vendor_id' => $vendor->vendor_id]) }}" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold {{ (int) $vendor->is_active === 1 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' }}">
+                                                        {{ (int) $vendor->is_active === 1 ? 'Disable' : 'Activate' }}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr class="empty-row">
+                                        <td colspan="5" class="px-5 py-6 text-center text-sm text-slate-500">No vendors found.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -79,7 +91,8 @@
     </div>
 
     <div id="vendor-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
-        <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="vendor-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="vendor-modal-title" class="text-lg font-semibold text-slate-900">Add Vendor</h3>
@@ -92,37 +105,57 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Vendor Name</label>
-                    <input id="vendor_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter vendor name" />
+                    <input id="vendor_name" name="vendor_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter vendor name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Category</label>
-                        <input id="vendor_category" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter category" />
+                        <input id="vendor_category" name="vendor_category" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter category" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Contact Person</label>
-                        <input id="vendor_contact_person" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter contact person" />
+                        <input id="vendor_contact_person" name="vendor_contact_person" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter contact person" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="vendor_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="vendor_description" name="vendor_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                @csrf
+                <input type="hidden" id="vendor_id" name="vendor_id" value="" />
+                <input type="hidden" id="vendor_form_method" name="_method" value="POST" />
+                <input type="hidden" id="vendor_created_at" name="created_at" value="" />
+                <input type="hidden" id="vendor_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeVendorMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveVendorEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="vendor-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="vendor-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openVendorMasterModal() {
             document.getElementById('vendor-modal-title').textContent = 'Add Vendor';
+            document.getElementById('vendor-master-form').action = '{{ route('vendor.master.store') }}';
+            document.getElementById('vendor_form_method').value = 'POST';
+            document.getElementById('vendor_id').value = '';
             document.getElementById('vendor_name').value = '';
             document.getElementById('vendor_category').value = '';
             document.getElementById('vendor_contact_person').value = '';
             document.getElementById('vendor_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('vendor_created_at');
+            const ua = document.getElementById('vendor_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('vendor-modal-submit').textContent = 'Save';
             document.getElementById('vendor-master-modal').classList.remove('hidden');
         }
@@ -133,10 +166,16 @@
 
         function editVendor(data) {
             document.getElementById('vendor-modal-title').textContent = 'Edit Vendor';
+            document.getElementById('vendor-master-form').action = '{{ url('/vendor-master') }}' + '/' + (data.vendorId || '');
+            document.getElementById('vendor_form_method').value = 'PUT';
+            document.getElementById('vendor_id').value = data.vendorId || '';
             document.getElementById('vendor_name').value = data.vendorName || '';
             document.getElementById('vendor_category').value = data.category || '';
             document.getElementById('vendor_contact_person').value = data.contactPerson || '';
             document.getElementById('vendor_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('vendor_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('vendor-modal-submit').textContent = 'Update';
             document.getElementById('vendor-master-modal').classList.remove('hidden');
         }

@@ -80,6 +80,7 @@
 
     <div id="support-group-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="support-group-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="support-group-modal-title" class="text-lg font-semibold text-slate-900">Add Support Group</h3>
@@ -92,37 +93,57 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Group Name</label>
-                    <input id="support_group_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter group name" />
+                    <input id="support_group_name" name="support_group_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter group name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Lead</label>
-                        <input id="support_group_lead" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter lead" />
+                        <input id="support_group_lead" name="support_group_lead" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter lead" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Escalation Level</label>
-                        <input id="support_group_escalation_level" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter escalation level" />
+                        <input id="support_group_escalation_level" name="support_group_escalation_level" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter escalation level" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="support_group_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="support_group_description" name="support_group_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                @csrf
+                <input type="hidden" id="support_group_id" name="support_group_id" value="" />
+                <input type="hidden" id="support_group_form_method" name="_method" value="POST" />
+                <input type="hidden" id="support_group_created_at" name="created_at" value="" />
+                <input type="hidden" id="support_group_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeSupportGroupMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveSupportGroupEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="support-group-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="support-group-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openSupportGroupMasterModal() {
             document.getElementById('support-group-modal-title').textContent = 'Add Support Group';
+            document.getElementById('support-group-master-form').action = '{{ route('support-group.master.store') }}';
+            document.getElementById('support_group_form_method').value = 'POST';
+            document.getElementById('support_group_id').value = '';
             document.getElementById('support_group_name').value = '';
             document.getElementById('support_group_lead').value = '';
             document.getElementById('support_group_escalation_level').value = '';
             document.getElementById('support_group_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('support_group_created_at');
+            const ua = document.getElementById('support_group_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('support-group-modal-submit').textContent = 'Save';
             document.getElementById('support-group-master-modal').classList.remove('hidden');
         }
@@ -133,10 +154,16 @@
 
         function editSupportGroup(data) {
             document.getElementById('support-group-modal-title').textContent = 'Edit Support Group';
+            document.getElementById('support-group-master-form').action = '{{ url('/support-group-master') }}' + '/' + (data.groupId || '');
+            document.getElementById('support_group_form_method').value = 'PUT';
+            document.getElementById('support_group_id').value = data.groupId || '';
             document.getElementById('support_group_name').value = data.groupName || '';
             document.getElementById('support_group_lead').value = data.lead || '';
             document.getElementById('support_group_escalation_level').value = data.escalationLevel || '';
             document.getElementById('support_group_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('support_group_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('support-group-modal-submit').textContent = 'Update';
             document.getElementById('support-group-master-modal').classList.remove('hidden');
         }

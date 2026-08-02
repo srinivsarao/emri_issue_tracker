@@ -211,35 +211,400 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
     })->middleware(['auth', 'menu.access:state.master'])->name('state.master.toggle');
 
-    Route::view('/vendor-master', 'pages.vendor-master', [
-        'title' => 'Vendor Master',
-        'description' => 'Manage vendor master records and vendor information.',
-    ])->middleware('menu.access:vendor.master')->name('vendor.master');
+    Route::get('/vendor-master', function () {
+        $vendors = DB::table('mst_vendor')
+            ->select('vendor_id', 'vendor_name', 'category', 'contact_person', 'is_active')
+            ->orderBy('vendor_name')
+            ->get();
 
-    Route::view('/service-master', 'pages.service-master', [
-        'title' => 'Service Master',
-        'description' => 'Manage service master records and service catalog entries.',
-    ])->middleware('menu.access:service.master')->name('service.master');
+        $format = request('format');
+        if ($format) {
+            $fileName = 'vendor-master-' . now()->format('YmdHis') . '.' . $format;
+            $rows = $vendors->map(function ($v) {
+                return [
+                    'Vendor Name' => $v->vendor_name,
+                    'Category' => $v->category ?? '-',
+                    'Contact Person' => $v->contact_person ?? '-',
+                    'Status' => (int) $v->is_active === 1 ? 'Active' : 'Inactive',
+                ];
+            })->toArray();
 
-    Route::view('/project-master', 'pages.project-master', [
-        'title' => 'Project Master',
-        'description' => 'Manage projects, customers, and project master details.',
-    ])->middleware('menu.access:project.master')->name('project.master');
+            if (in_array($format, ['csv', 'xlsx'], true)) {
+                $output = '';
+                $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', array_keys($rows[0] ?? []))) . "\r\n";
+                foreach ($rows as $row) {
+                    $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', $row)) . "\r\n";
+                }
 
-    Route::view('/application-master', 'pages.application-master', [
-        'title' => 'Application Master',
-        'description' => 'Manage application records and application-level settings.',
-    ])->middleware('menu.access:application.master')->name('application.master');
+                return response($output, 200, [
+                    'Content-Type' => 'text/csv',
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                ]);
+            }
 
-    Route::view('/module-master', 'pages.module-master', [
-        'title' => 'Module Master',
-        'description' => 'Manage application modules and module assignments.',
-    ])->middleware('menu.access:module.master')->name('module.master');
+            if ($format === 'pdf') {
+                $html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">';
+                $html .= '<thead><tr><th>Vendor Name</th><th>Category</th><th>Contact Person</th><th>Status</th></tr></thead><tbody>';
+                foreach ($rows as $row) {
+                    $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>';
+                }
+                $html .= '</tbody></table>';
 
-    Route::view('/support-group-master', 'pages.support-group-master', [
-        'title' => 'Support Group Master',
-        'description' => 'Manage support groups and group ownership details.',
-    ])->middleware('menu.access:support-group.master')->name('support-group.master');
+                return response($html, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                ]);
+            }
+
+            return redirect()->route('vendor.master')->with('error', 'Unsupported export format.');
+        }
+
+        return view('pages.vendor-master', [
+            'title' => 'Vendor Master',
+            'description' => 'Manage vendor master records and vendor information.',
+            'vendors' => $vendors,
+        ]);
+    })->middleware('menu.access:vendor.master')->name('vendor.master');
+
+    Route::post('/vendor-master', function (Illuminate\Http\Request $request) {
+        $request->validate([
+            'vendor_name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $insertData = [
+                'vendor_name' => $request->vendor_name,
+                'category' => $request->vendor_category,
+                'contact_person' => $request->vendor_contact_person,
+                'description' => $request->vendor_description,
+                'is_active' => 1,
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'created_at')) {
+                $insertData['created_at'] = now();
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'created_by')) {
+                $insertData['created_by'] = auth()->id();
+            }
+
+            DB::table('mst_vendor')->insert($insertData);
+
+            return redirect()->route('vendor.master')->with('success', 'Vendor created successfully.');
+        } catch (\Throwable $exception) {
+            return redirect()->route('vendor.master')->with('error', 'Unable to create vendor. Please try again.');
+        }
+    })->middleware(['auth', 'menu.access:vendor.master'])->name('vendor.master.store');
+
+    Route::put('/vendor-master/{vendor_id}', function (Illuminate\Http\Request $request, $vendor_id) {
+        $request->validate([
+            'vendor_name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $updateData = [
+                'vendor_name' => $request->vendor_name,
+                'category' => $request->vendor_category,
+                'contact_person' => $request->vendor_contact_person,
+                'description' => $request->vendor_description,
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'update_at')) {
+                $updateData['update_at'] = now();
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'updated_by')) {
+                $updateData['updated_by'] = auth()->id();
+            }
+
+            $updated = DB::table('mst_vendor')
+                ->where('vendor_id', $vendor_id)
+                ->update($updateData);
+
+            if (! $updated) {
+                return redirect()->route('vendor.master')->with('error', 'Vendor not found or no changes made.');
+            }
+
+            return redirect()->route('vendor.master')->with('success', 'Vendor updated successfully.');
+        } catch (\Throwable $exception) {
+            return redirect()->route('vendor.master')->with('error', 'Unable to update vendor. Please try again.');
+        }
+    })->middleware(['auth', 'menu.access:vendor.master'])->name('vendor.master.update');
+
+    Route::post('/vendor-master/{vendor_id}/toggle', function (Illuminate\Http\Request $request, $vendor_id) {
+        try {
+            $vendor = DB::table('mst_vendor')->where('vendor_id', $vendor_id)->first();
+
+            if (! $vendor) {
+                return redirect()->route('vendor.master')->with('error', 'Vendor not found.');
+            }
+
+            $newStatus = ((int) $vendor->is_active === 1) ? 0 : 1;
+
+            $toggleData = [
+                'is_active' => $newStatus,
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'update_at')) {
+                $toggleData['update_at'] = now();
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_vendor', 'updated_by')) {
+                $toggleData['updated_by'] = auth()->id();
+            }
+
+            DB::table('mst_vendor')
+                ->where('vendor_id', $vendor_id)
+                ->update($toggleData);
+
+            return redirect()->route('vendor.master')
+                ->with('success', $newStatus === 1 ? 'Vendor reactivated successfully.' : 'Vendor disabled successfully.');
+        } catch (\Throwable $exception) {
+            return redirect()->route('vendor.master')->with('error', 'Unable to change vendor status. Please try again.');
+        }
+    })->middleware(['auth', 'menu.access:vendor.master'])->name('vendor.master.toggle');
+
+    Route::get('/service-master', function () {
+        $rows = DB::table('mst_service')
+            ->select('service_id', 'service_name', 'service_type', 'owner', 'is_active')
+            ->orderBy('service_name')
+            ->get();
+
+        $format = request('format');
+        if ($format) {
+            $fileName = 'service-master-' . now()->format('YmdHis') . '.' . $format;
+            $rowsExport = $rows->map(function ($r) {
+                return [
+                    'Service Name' => $r->service_name,
+                    'Service Type' => $r->service_type ?? '-',
+                    'Owner' => $r->owner ?? '-',
+                    'Status' => (int) $r->is_active === 1 ? 'Active' : 'Inactive',
+                ];
+            })->toArray();
+
+            if (in_array($format, ['csv', 'xlsx'], true)) {
+                $output = '';
+                $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', array_keys($rowsExport[0] ?? []))) . "\r\n";
+                foreach ($rowsExport as $row) {
+                    $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', $row)) . "\r\n";
+                }
+
+                return response($output, 200, [
+                    'Content-Type' => 'text/csv',
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                ]);
+            }
+
+            if ($format === 'pdf') {
+                $html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">';
+                $html .= '<thead><tr><th>Service Name</th><th>Service Type</th><th>Owner</th><th>Status</th></tr></thead><tbody>';
+                foreach ($rowsExport as $row) {
+                    $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>';
+                }
+                $html .= '</tbody></table>';
+
+                return response($html, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                ]);
+            }
+
+            return redirect()->route('service.master')->with('error', 'Unsupported export format.');
+        }
+
+        return view('pages.service-master', [
+            'title' => 'Service Master',
+            'description' => 'Manage service master records and service catalog entries.',
+            'services' => $rows,
+        ]);
+    })->middleware('menu.access:service.master')->name('service.master');
+
+    Route::post('/service-master', function (Illuminate\Http\Request $request) {
+        $request->validate(['service_name' => 'required|string|max:255']);
+        try {
+            $insert = [
+                'service_name' => $request->service_name,
+                'service_type' => $request->service_type,
+                'owner' => $request->service_owner,
+                'description' => $request->service_description,
+                'is_active' => 1,
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'created_at')) $insert['created_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'created_by')) $insert['created_by'] = auth()->id();
+            DB::table('mst_service')->insert($insert);
+            return redirect()->route('service.master')->with('success', 'Service created successfully.');
+        } catch (\Throwable $e) {
+            return redirect()->route('service.master')->with('error', 'Unable to create service.');
+        }
+    })->middleware(['auth','menu.access:service.master'])->name('service.master.store');
+
+    Route::put('/service-master/{service_id}', function (Illuminate\Http\Request $request, $service_id) {
+        $request->validate(['service_name' => 'required|string|max:255']);
+        try {
+            $update = [
+                'service_name' => $request->service_name,
+                'service_type' => $request->service_type,
+                'owner' => $request->service_owner,
+                'description' => $request->service_description,
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'update_at')) $update['update_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'updated_by')) $update['updated_by'] = auth()->id();
+            $updated = DB::table('mst_service')->where('service_id', $service_id)->update($update);
+            if (! $updated) return redirect()->route('service.master')->with('error', 'Not found or no changes.');
+            return redirect()->route('service.master')->with('success', 'Service updated successfully.');
+        } catch (\Throwable $e) {
+            return redirect()->route('service.master')->with('error', 'Unable to update service.');
+        }
+    })->middleware(['auth','menu.access:service.master'])->name('service.master.update');
+
+    Route::post('/service-master/{service_id}/toggle', function (Illuminate\Http\Request $request, $service_id) {
+        try {
+            $r = DB::table('mst_service')->where('service_id', $service_id)->first();
+            if (! $r) return redirect()->route('service.master')->with('error', 'Not found.');
+            $new = ((int)$r->is_active === 1) ? 0 : 1;
+            $data = ['is_active' => $new];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'update_at')) $data['update_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_service', 'updated_by')) $data['updated_by'] = auth()->id();
+            DB::table('mst_service')->where('service_id', $service_id)->update($data);
+            return redirect()->route('service.master')->with('success', $new === 1 ? 'Service reactivated.' : 'Service disabled.');
+        } catch (\Throwable $e) {
+            return redirect()->route('service.master')->with('error', 'Unable to toggle service.');
+        }
+    })->middleware(['auth','menu.access:service.master'])->name('service.master.toggle');
+
+    Route::get('/project-master', function () {
+        $rows = DB::table('mst_project')
+            ->select('project_id', 'project_name', 'customer', 'lead', 'is_active')
+            ->orderBy('project_name')
+            ->get();
+        $format = request('format');
+        if ($format) {
+            $fileName = 'project-master-' . now()->format('YmdHis') . '.' . $format;
+            $rowsExport = $rows->map(function ($r) {
+                return ['Project Name' => $r->project_name, 'Customer' => $r->customer ?? '-', 'Lead' => $r->lead ?? '-', 'Status' => (int)$r->is_active === 1 ? 'Active' : 'Inactive'];
+            })->toArray();
+            if (in_array($format, ['csv','xlsx'], true)) {
+                $output = '';
+                $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', array_keys($rowsExport[0] ?? []))) . "\r\n";
+                foreach ($rowsExport as $row) { $output .= implode(',', array_map(fn($v) => '"' . str_replace('"', '""', $v) . '"', $row)) . "\r\n"; }
+                return response($output, 200, ['Content-Type' => 'text/csv','Content-Disposition' => 'attachment; filename="' . $fileName . '"']);
+            }
+            if ($format === 'pdf') {
+                $html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">';
+                $html .= '<thead><tr><th>Project Name</th><th>Customer</th><th>Lead</th><th>Status</th></tr></thead><tbody>';
+                foreach ($rowsExport as $row) { $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>'; }
+                $html .= '</tbody></table>';
+                return response($html, 200, ['Content-Type' => 'application/pdf','Content-Disposition' => 'attachment; filename="' . $fileName . '"']);
+            }
+            return redirect()->route('project.master')->with('error', 'Unsupported export format.');
+        }
+        return view('pages.project-master', ['title' => 'Project Master','description' => 'Manage projects, customers, and project master details.','projects' => $rows]);
+    })->middleware('menu.access:project.master')->name('project.master');
+
+    Route::post('/project-master', function (Illuminate\Http\Request $request) {
+        $request->validate(['project_name' => 'required|string|max:255']);
+        try {
+            $insert = ['project_name' => $request->project_name,'customer' => $request->project_customer,'lead' => $request->project_lead,'description' => $request->project_description,'is_active' => 1];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','created_at')) $insert['created_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','created_by')) $insert['created_by'] = auth()->id();
+            DB::table('mst_project')->insert($insert);
+            return redirect()->route('project.master')->with('success','Project created successfully.');
+        } catch (\Throwable $e) { return redirect()->route('project.master')->with('error','Unable to create project.'); }
+    })->middleware(['auth','menu.access:project.master'])->name('project.master.store');
+
+    Route::put('/project-master/{project_id}', function (Illuminate\Http\Request $request, $project_id) {
+        $request->validate(['project_name' => 'required|string|max:255']);
+        try {
+            $update = ['project_name' => $request->project_name,'customer' => $request->project_customer,'lead' => $request->project_lead,'description' => $request->project_description];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','update_at')) $update['update_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','updated_by')) $update['updated_by'] = auth()->id();
+            $updated = DB::table('mst_project')->where('project_id',$project_id)->update($update);
+            if (! $updated) return redirect()->route('project.master')->with('error','Not found or no changes.');
+            return redirect()->route('project.master')->with('success','Project updated successfully.');
+        } catch (\Throwable $e) { return redirect()->route('project.master')->with('error','Unable to update project.'); }
+    })->middleware(['auth','menu.access:project.master'])->name('project.master.update');
+
+    Route::post('/project-master/{project_id}/toggle', function (Illuminate\Http\Request $request, $project_id) {
+        try {
+            $r = DB::table('mst_project')->where('project_id',$project_id)->first(); if (! $r) return redirect()->route('project.master')->with('error','Not found.');
+            $new = ((int)$r->is_active === 1) ? 0 : 1; $data = ['is_active' => $new];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','update_at')) $data['update_at'] = now();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('mst_project','updated_by')) $data['updated_by'] = auth()->id();
+            DB::table('mst_project')->where('project_id',$project_id)->update($data);
+            return redirect()->route('project.master')->with('success', $new === 1 ? 'Project reactivated.' : 'Project disabled.');
+        } catch (\Throwable $e) { return redirect()->route('project.master')->with('error','Unable to toggle project.'); }
+    })->middleware(['auth','menu.access:project.master'])->name('project.master.toggle');
+
+    Route::get('/application-master', function () {
+        $rows = DB::table('mst_application')
+            ->select('application_id', 'application_name', 'owner', 'version', 'is_active')
+            ->orderBy('application_name')
+            ->get();
+        $format = request('format');
+        if ($format) {
+            $fileName = 'application-master-' . now()->format('YmdHis') . '.' . $format;
+            $rowsExport = $rows->map(function ($r) { return ['Application Name' => $r->application_name, 'Owner' => $r->owner ?? '-', 'Version' => $r->version ?? '-', 'Status' => (int)$r->is_active === 1 ? 'Active' : 'Inactive']; })->toArray();
+            if (in_array($format,['csv','xlsx'], true)) {
+                $output = '';
+                $output .= implode(',', array_map(fn($value) => '"' . str_replace('"', '""', $value) . '"', array_keys($rowsExport[0] ?? []))) . "\r\n";
+                foreach ($rowsExport as $row) { $output .= implode(',', array_map(fn($v) => '"' . str_replace('"','""',$v) . '"', $row)) . "\r\n"; }
+                return response($output, 200, ['Content-Type' => 'text/csv','Content-Disposition' => 'attachment; filename="' . $fileName . '"']);
+            }
+            if ($format === 'pdf') { $html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">'; $html .= '<thead><tr><th>Application Name</th><th>Owner</th><th>Version</th><th>Status</th></tr></thead><tbody>'; foreach ($rowsExport as $row) { $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>'; } $html .= '</tbody></table>'; return response($html,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="' . $fileName . '"']); }
+            return redirect()->route('application.master')->with('error','Unsupported export format.');
+        }
+        return view('pages.application-master',['title'=>'Application Master','description'=>'Manage application records and application-level settings.','applications'=>$rows]);
+    })->middleware('menu.access:application.master')->name('application.master');
+
+    Route::post('/application-master', function (Illuminate\Http\Request $request) { $request->validate(['application_name'=>'required|string|max:255']); try { $insert = ['application_name'=>$request->application_name,'owner'=>$request->application_owner,'version'=>$request->application_version,'description'=>$request->application_description,'is_active'=>1]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','created_at')) $insert['created_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','created_by')) $insert['created_by']=auth()->id(); DB::table('mst_application')->insert($insert); return redirect()->route('application.master')->with('success','Application created successfully.'); } catch (\Throwable $e) { return redirect()->route('application.master')->with('error','Unable to create application.'); } })->middleware(['auth','menu.access:application.master'])->name('application.master.store');
+
+    Route::put('/application-master/{application_id}', function (Illuminate\Http\Request $request, $application_id) { $request->validate(['application_name'=>'required|string|max:255']); try { $update=['application_name'=>$request->application_name,'owner'=>$request->application_owner,'version'=>$request->application_version,'description'=>$request->application_description]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','update_at')) $update['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','updated_by')) $update['updated_by']=auth()->id(); $updated=DB::table('mst_application')->where('application_id',$application_id)->update($update); if (! $updated) return redirect()->route('application.master')->with('error','Not found or no changes.'); return redirect()->route('application.master')->with('success','Application updated successfully.'); } catch (\Throwable $e) { return redirect()->route('application.master')->with('error','Unable to update application.'); } })->middleware(['auth','menu.access:application.master'])->name('application.master.update');
+
+    Route::post('/application-master/{application_id}/toggle', function (Illuminate\Http\Request $request, $application_id) { try { $r=DB::table('mst_application')->where('application_id',$application_id)->first(); if (! $r) return redirect()->route('application.master')->with('error','Not found.'); $new=((int)$r->is_active===1)?0:1; $data=['is_active'=>$new]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','update_at')) $data['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_application','updated_by')) $data['updated_by']=auth()->id(); DB::table('mst_application')->where('application_id',$application_id)->update($data); return redirect()->route('application.master')->with('success',$new===1?'Application reactivated.':'Application disabled.'); } catch (\Throwable $e) { return redirect()->route('application.master')->with('error','Unable to toggle application.'); } })->middleware(['auth','menu.access:application.master'])->name('application.master.toggle');
+
+    Route::get('/module-master', function () {
+        $rows = DB::table('mst_module')
+            ->select('module_id', 'module_name', 'application', 'owner', 'is_active')
+            ->orderBy('module_name')
+            ->get();
+        $format = request('format');
+        if ($format) {
+            $fileName = 'module-master-' . now()->format('YmdHis') . '.' . $format;
+            $rowsExport = $rows->map(function ($r) { return ['Module Name' => $r->module_name, 'Application' => $r->application ?? '-', 'Owner' => $r->owner ?? '-', 'Status' => (int)$r->is_active === 1 ? 'Active' : 'Inactive']; })->toArray();
+            if (in_array($format,['csv','xlsx'], true)) { $output = ''; $output .= implode(',', array_map(fn($value) => '"' . str_replace('"','""',$value) . '"', array_keys($rowsExport[0] ?? []))) . "\r\n"; foreach ($rowsExport as $row) { $output .= implode(',', array_map(fn($v) => '"' . str_replace('"','""',$v) . '"', $row)) . "\r\n"; } return response($output,200,['Content-Type'=>'text/csv','Content-Disposition'=>'attachment; filename="' . $fileName . '"']); }
+            if ($format === 'pdf') { $html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">'; $html .= '<thead><tr><th>Module Name</th><th>Application</th><th>Owner</th><th>Status</th></tr></thead><tbody>'; foreach ($rowsExport as $row) { $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>'; } $html .= '</tbody></table>'; return response($html,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="' . $fileName . '"']); }
+            return redirect()->route('module.master')->with('error','Unsupported export format.');
+        }
+        return view('pages.module-master',['title'=>'Module Master','description'=>'Manage application modules and module assignments.','modules'=>$rows]);
+    })->middleware('menu.access:module.master')->name('module.master');
+
+    Route::post('/module-master', function (Illuminate\Http\Request $request) { $request->validate(['module_name'=>'required|string|max:255']); try { $insert=['module_name'=>$request->module_name,'application'=>$request->module_application,'owner'=>$request->module_owner,'description'=>$request->module_description,'is_active'=>1]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','created_at')) $insert['created_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','created_by')) $insert['created_by']=auth()->id(); DB::table('mst_module')->insert($insert); return redirect()->route('module.master')->with('success','Module created successfully.'); } catch (\Throwable $e) { return redirect()->route('module.master')->with('error','Unable to create module.'); } })->middleware(['auth','menu.access:module.master'])->name('module.master.store');
+
+    Route::put('/module-master/{module_id}', function (Illuminate\Http\Request $request, $module_id) { $request->validate(['module_name'=>'required|string|max:255']); try { $update=['module_name'=>$request->module_name,'application'=>$request->module_application,'owner'=>$request->module_owner,'description'=>$request->module_description]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','update_at')) $update['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','updated_by')) $update['updated_by']=auth()->id(); $updated=DB::table('mst_module')->where('module_id',$module_id)->update($update); if (! $updated) return redirect()->route('module.master')->with('error','Not found or no changes.'); return redirect()->route('module.master')->with('success','Module updated successfully.'); } catch (\Throwable $e) { return redirect()->route('module.master')->with('error','Unable to update module.'); } })->middleware(['auth','menu.access:module.master'])->name('module.master.update');
+
+    Route::post('/module-master/{module_id}/toggle', function (Illuminate\Http\Request $request, $module_id) { try { $r=DB::table('mst_module')->where('module_id',$module_id)->first(); if (! $r) return redirect()->route('module.master')->with('error','Not found.'); $new=((int)$r->is_active===1)?0:1; $data=['is_active'=>$new]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','update_at')) $data['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_module','updated_by')) $data['updated_by']=auth()->id(); DB::table('mst_module')->where('module_id',$module_id)->update($data); return redirect()->route('module.master')->with('success',$new===1?'Module reactivated.':'Module disabled.'); } catch (\Throwable $e) { return redirect()->route('module.master')->with('error','Unable to toggle module.'); } })->middleware(['auth','menu.access:module.master'])->name('module.master.toggle');
+
+    Route::get('/support-group-master', function () {
+        $rows = DB::table('mst_support_group')
+            ->select('support_group_id', 'support_group_name', 'lead', 'escalation_level', 'is_active')
+            ->orderBy('support_group_name')
+            ->get();
+        $format = request('format');
+        if ($format) {
+            $fileName = 'support-group-master-' . now()->format('YmdHis') . '.' . $format;
+            $rowsExport = $rows->map(function ($r) { return ['Support Group' => $r->support_group_name, 'Lead' => $r->lead ?? '-', 'Escalation Level' => $r->escalation_level ?? '-', 'Status' => (int)$r->is_active === 1 ? 'Active' : 'Inactive']; })->toArray();
+            if (in_array($format,['csv','xlsx'], true)) { $output=''; $output .= implode(',', array_map(fn($value) => '"' . str_replace('"','""',$value) . '"', array_keys($rowsExport[0] ?? []))) . "\r\n"; foreach ($rowsExport as $row) { $output .= implode(',', array_map(fn($v) => '"' . str_replace('"','""',$v) . '"', $row)) . "\r\n"; } return response($output,200,['Content-Type'=>'text/csv','Content-Disposition'=>'attachment; filename="' . $fileName . '"']); }
+            if ($format === 'pdf') { $html='<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;">'; $html .= '<thead><tr><th>Support Group</th><th>Lead</th><th>Escalation Level</th><th>Status</th></tr></thead><tbody>'; foreach ($rowsExport as $row) { $html .= '<tr>' . implode('', array_map(fn($value) => '<td>' . e($value) . '</td>', $row)) . '</tr>'; } $html .= '</tbody></table>'; return response($html,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="' . $fileName . '"']); }
+            return redirect()->route('support-group.master')->with('error','Unsupported export format.');
+        }
+        return view('pages.support-group-master',['title'=>'Support Group Master','description'=>'Manage support groups and group ownership details.','supportGroups'=>$rows]);
+    })->middleware('menu.access:support-group.master')->name('support-group.master');
+
+    Route::post('/support-group-master', function (Illuminate\Http\Request $request) { $request->validate(['support_group_name'=>'required|string|max:255']); try { $insert=['support_group_name'=>$request->support_group_name,'lead'=>$request->support_group_lead,'escalation_level'=>$request->support_group_escalation_level,'description'=>$request->support_group_description,'is_active'=>1]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','created_at')) $insert['created_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','created_by')) $insert['created_by']=auth()->id(); DB::table('mst_support_group')->insert($insert); return redirect()->route('support-group.master')->with('success','Support group created successfully.'); } catch (\Throwable $e) { return redirect()->route('support-group.master')->with('error','Unable to create support group.'); } })->middleware(['auth','menu.access:support-group.master'])->name('support-group.master.store');
+
+    Route::put('/support-group-master/{support_group_id}', function (Illuminate\Http\Request $request, $support_group_id) { $request->validate(['support_group_name'=>'required|string|max:255']); try { $update=['support_group_name'=>$request->support_group_name,'lead'=>$request->support_group_lead,'escalation_level'=>$request->support_group_escalation_level,'description'=>$request->support_group_description]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','update_at')) $update['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','updated_by')) $update['updated_by']=auth()->id(); $updated=DB::table('mst_support_group')->where('support_group_id',$support_group_id)->update($update); if (! $updated) return redirect()->route('support-group.master')->with('error','Not found or no changes.'); return redirect()->route('support-group.master')->with('success','Support group updated successfully.'); } catch (\Throwable $e) { return redirect()->route('support-group.master')->with('error','Unable to update support group.'); } })->middleware(['auth','menu.access:support-group.master'])->name('support-group.master.update');
+
+    Route::post('/support-group-master/{support_group_id}/toggle', function (Illuminate\Http\Request $request, $support_group_id) { try { $r=DB::table('mst_support_group')->where('support_group_id',$support_group_id)->first(); if (! $r) return redirect()->route('support-group.master')->with('error','Not found.'); $new=((int)$r->is_active===1)?0:1; $data=['is_active'=>$new]; if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','update_at')) $data['update_at']=now(); if (\Illuminate\Support\Facades\Schema::hasColumn('mst_support_group','updated_by')) $data['updated_by']=auth()->id(); DB::table('mst_support_group')->where('support_group_id',$support_group_id)->update($data); return redirect()->route('support-group.master')->with('success',$new===1?'Support group reactivated.':'Support group disabled.'); } catch (\Throwable $e) { return redirect()->route('support-group.master')->with('error','Unable to toggle support group.'); } })->middleware(['auth','menu.access:support-group.master'])->name('support-group.master.toggle');
 
     Route::view('/user-master', 'pages.generic-admin-page', [
         'title' => 'User Master',

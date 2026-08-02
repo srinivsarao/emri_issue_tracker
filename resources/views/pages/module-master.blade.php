@@ -80,6 +80,7 @@
 
     <div id="module-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="module-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="module-modal-title" class="text-lg font-semibold text-slate-900">Add Module</h3>
@@ -92,37 +93,57 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Module Name</label>
-                    <input id="module_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter module name" />
+                    <input id="module_name" name="module_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter module name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Application</label>
-                        <input id="module_application" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter application" />
+                        <input id="module_application" name="module_application" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter application" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Owner</label>
-                        <input id="module_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
+                        <input id="module_owner" name="module_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="module_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="module_description" name="module_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                @csrf
+                <input type="hidden" id="module_id" name="module_id" value="" />
+                <input type="hidden" id="module_form_method" name="_method" value="POST" />
+                <input type="hidden" id="module_created_at" name="created_at" value="" />
+                <input type="hidden" id="module_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeModuleMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveModuleEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="module-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="module-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openModuleMasterModal() {
             document.getElementById('module-modal-title').textContent = 'Add Module';
+            document.getElementById('module-master-form').action = '{{ route('module.master.store') }}';
+            document.getElementById('module_form_method').value = 'POST';
+            document.getElementById('module_id').value = '';
             document.getElementById('module_name').value = '';
             document.getElementById('module_application').value = '';
             document.getElementById('module_owner').value = '';
             document.getElementById('module_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('module_created_at');
+            const ua = document.getElementById('module_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('module-modal-submit').textContent = 'Save';
             document.getElementById('module-master-modal').classList.remove('hidden');
         }
@@ -133,10 +154,16 @@
 
         function editModule(data) {
             document.getElementById('module-modal-title').textContent = 'Edit Module';
+            document.getElementById('module-master-form').action = '{{ url('/module-master') }}' + '/' + (data.moduleId || '');
+            document.getElementById('module_form_method').value = 'PUT';
+            document.getElementById('module_id').value = data.moduleId || '';
             document.getElementById('module_name').value = data.moduleName || '';
             document.getElementById('module_application').value = data.application || '';
             document.getElementById('module_owner').value = data.owner || '';
             document.getElementById('module_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('module_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('module-modal-submit').textContent = 'Update';
             document.getElementById('module-master-modal').classList.remove('hidden');
         }

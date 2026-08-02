@@ -46,30 +46,29 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Emergency Support</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Critical</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Nina Shah</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-service-name="Emergency Support" data-service-type="Critical" data-owner="Nina Shah" data-status="active" onclick="editService(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-200">Disable</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Scheduled Maintenance</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Routine</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Amit Verma</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Inactive</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-service-name="Scheduled Maintenance" data-service-type="Routine" data-owner="Amit Verma" data-status="inactive" onclick="editService(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">Activate</button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        @forelse($services as $service)
+                                            <tr>
+                                                <td class="px-5 py-3 text-sm font-semibold text-slate-900">{{ $service->service_name }}</td>
+                                                <td class="px-5 py-3 text-sm text-slate-600">{{ $service->service_type ?? '-' }}</td>
+                                                <td class="px-5 py-3 text-sm text-slate-600">{{ $service->owner ?? '-' }}</td>
+                                                <td class="px-5 py-3 text-sm">
+                                                    <span class="rounded-full {{ (int)$service->is_active === 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-semibold">{{ (int)$service->is_active === 1 ? 'Active' : 'Inactive' }}</span>
+                                                </td>
+                                                <td class="px-5 py-3 text-sm">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <button type="button" data-service-id="{{ $service->service_id }}" data-service-name="{{ $service->service_name }}" data-service-type="{{ $service->service_type }}" data-owner="{{ $service->owner }}" data-status="{{ (int)$service->is_active === 1 ? 'active' : 'inactive' }}" onclick="editService(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
+                                                        <form method="POST" action="{{ route('service.master.toggle', ['service_id' => $service->service_id]) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold {{ (int)$service->is_active === 1 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' }}">{{ (int)$service->is_active === 1 ? 'Disable' : 'Activate' }}</button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr class="empty-row">
+                                                <td colspan="5" class="px-5 py-6 text-center text-sm text-slate-500">No services found.</td>
+                                            </tr>
+                                        @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -80,6 +79,7 @@
 
     <div id="service-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="service-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="service-modal-title" class="text-lg font-semibold text-slate-900">Add Service</h3>
@@ -92,37 +92,58 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Service Name</label>
-                    <input id="service_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter service name" />
+                    <input id="service_name" name="service_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter service name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Service Type</label>
-                        <input id="service_type" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter service type" />
+                        <input id="service_type" name="service_type" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter service type" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Owner</label>
-                        <input id="service_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
+                        <input id="service_owner" name="service_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="service_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="service_description" name="service_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                <input type="hidden" id="service_created_at" name="created_at" value="" />
+                <input type="hidden" id="service_updated_at" name="updated_at" value="" />
+                <input type="hidden" id="service_id" name="service_id" value="" />
+                <input type="hidden" id="service_form_method" name="_method" value="POST" />
+                <input type="hidden" id="service_created_at" name="created_at" value="" />
+                <input type="hidden" id="service_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeServiceMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveServiceEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="service-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="service-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openServiceMasterModal() {
             document.getElementById('service-modal-title').textContent = 'Add Service';
+            document.getElementById('service-master-form').action = '{{ route('service.master.store') }}';
+            document.getElementById('service_form_method').value = 'POST';
+            document.getElementById('service_id').value = '';
             document.getElementById('service_name').value = '';
             document.getElementById('service_type').value = '';
             document.getElementById('service_owner').value = '';
             document.getElementById('service_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('service_created_at');
+            const ua = document.getElementById('service_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('service-modal-submit').textContent = 'Save';
             document.getElementById('service-master-modal').classList.remove('hidden');
         }
@@ -133,10 +154,16 @@
 
         function editService(data) {
             document.getElementById('service-modal-title').textContent = 'Edit Service';
+            document.getElementById('service-master-form').action = '{{ url('/service-master') }}' + '/' + (data.serviceId || '');
+            document.getElementById('service_form_method').value = 'PUT';
+            document.getElementById('service_id').value = data.serviceId || '';
             document.getElementById('service_name').value = data.serviceName || '';
             document.getElementById('service_type').value = data.serviceType || '';
             document.getElementById('service_owner').value = data.owner || '';
             document.getElementById('service_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('service_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('service-modal-submit').textContent = 'Update';
             document.getElementById('service-master-modal').classList.remove('hidden');
         }

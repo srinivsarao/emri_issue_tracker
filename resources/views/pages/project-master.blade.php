@@ -46,30 +46,29 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">EMRI Mobile App</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">East Zone</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Harsha Mehta</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-project-name="EMRI Mobile App" data-customer="East Zone" data-lead="Harsha Mehta" data-status="active" onclick="editProject(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-200">Disable</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Customer Portal</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">West Region</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Priya Nair</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Inactive</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-project-name="Customer Portal" data-customer="West Region" data-lead="Priya Nair" data-status="inactive" onclick="editProject(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">Activate</button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                @forelse($projects as $project)
+                                    <tr>
+                                        <td class="px-5 py-3 text-sm font-semibold text-slate-900">{{ $project->project_name }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $project->customer ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $project->lead ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <span class="rounded-full {{ (int)$project->is_active === 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-semibold">{{ (int)$project->is_active === 1 ? 'Active' : 'Inactive' }}</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <button type="button" data-project-id="{{ $project->project_id }}" data-project-name="{{ $project->project_name }}" data-customer="{{ $project->customer }}" data-lead="{{ $project->lead }}" data-status="{{ (int)$project->is_active === 1 ? 'active' : 'inactive' }}" onclick="editProject(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
+                                                <form method="POST" action="{{ route('project.master.toggle', ['project_id' => $project->project_id]) }}" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold {{ (int)$project->is_active === 1 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' }}">{{ (int)$project->is_active === 1 ? 'Disable' : 'Activate' }}</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr class="empty-row">
+                                        <td colspan="5" class="px-5 py-6 text-center text-sm text-slate-500">No projects found.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -80,6 +79,7 @@
 
     <div id="project-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="project-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="project-modal-title" class="text-lg font-semibold text-slate-900">Add Project</h3>
@@ -92,37 +92,57 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Project Name</label>
-                    <input id="project_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter project name" />
+                    <input id="project_name" name="project_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter project name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Customer</label>
-                        <input id="project_customer" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter customer" />
+                        <input id="project_customer" name="project_customer" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter customer" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Lead</label>
-                        <input id="project_lead" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter lead" />
+                        <input id="project_lead" name="project_lead" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter lead" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="project_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="project_description" name="project_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                @csrf
+                <input type="hidden" id="project_id" name="project_id" value="" />
+                <input type="hidden" id="project_form_method" name="_method" value="POST" />
+                <input type="hidden" id="project_created_at" name="created_at" value="" />
+                <input type="hidden" id="project_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeProjectMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveProjectEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="project-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="project-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openProjectMasterModal() {
             document.getElementById('project-modal-title').textContent = 'Add Project';
+            document.getElementById('project-master-form').action = '{{ route('project.master.store') }}';
+            document.getElementById('project_form_method').value = 'POST';
+            document.getElementById('project_id').value = '';
             document.getElementById('project_name').value = '';
             document.getElementById('project_customer').value = '';
             document.getElementById('project_lead').value = '';
             document.getElementById('project_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('project_created_at');
+            const ua = document.getElementById('project_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('project-modal-submit').textContent = 'Save';
             document.getElementById('project-master-modal').classList.remove('hidden');
         }
@@ -133,10 +153,16 @@
 
         function editProject(data) {
             document.getElementById('project-modal-title').textContent = 'Edit Project';
+            document.getElementById('project-master-form').action = '{{ url('/project-master') }}' + '/' + (data.projectId || '');
+            document.getElementById('project_form_method').value = 'PUT';
+            document.getElementById('project_id').value = data.projectId || '';
             document.getElementById('project_name').value = data.projectName || '';
             document.getElementById('project_customer').value = data.customer || '';
             document.getElementById('project_lead').value = data.lead || '';
             document.getElementById('project_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('project_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('project-modal-submit').textContent = 'Update';
             document.getElementById('project-master-modal').classList.remove('hidden');
         }

@@ -46,30 +46,29 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Issue Tracker</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">IT Team</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">v2.1</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-app-name="Issue Tracker" data-owner="IT Team" data-version="v2.1" data-status="active" onclick="editApplication(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-200">Disable</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-5 py-3 text-sm font-semibold text-slate-900">Help Desk</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">Support Team</td>
-                                    <td class="px-5 py-3 text-sm text-slate-600">v1.8</td>
-                                    <td class="px-5 py-3 text-sm"><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Inactive</span></td>
-                                    <td class="px-5 py-3 text-sm">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button type="button" data-app-name="Help Desk" data-owner="Support Team" data-version="v1.8" data-status="inactive" onclick="editApplication(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
-                                            <button type="button" class="rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200">Activate</button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                @forelse($applications as $app)
+                                    <tr>
+                                        <td class="px-5 py-3 text-sm font-semibold text-slate-900">{{ $app->application_name }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $app->owner ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm text-slate-600">{{ $app->version ?? '-' }}</td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <span class="rounded-full {{ (int)$app->is_active === 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-semibold">{{ (int)$app->is_active === 1 ? 'Active' : 'Inactive' }}</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-sm">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <button type="button" data-application-id="{{ $app->application_id }}" data-app-name="{{ $app->application_name }}" data-owner="{{ $app->owner }}" data-version="{{ $app->version }}" data-status="{{ (int)$app->is_active === 1 ? 'active' : 'inactive' }}" onclick="editApplication(this.dataset)" class="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Edit</button>
+                                                <form method="POST" action="{{ route('application.master.toggle', ['application_id' => $app->application_id]) }}" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold {{ (int)$app->is_active === 1 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' }}">{{ (int)$app->is_active === 1 ? 'Disable' : 'Activate' }}</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr class="empty-row">
+                                        <td colspan="5" class="px-5 py-6 text-center text-sm text-slate-500">No applications found.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -80,6 +79,7 @@
 
     <div id="application-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
+            <form id="application-master-form" method="POST" action="">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="application-modal-title" class="text-lg font-semibold text-slate-900">Add Application</h3>
@@ -92,37 +92,57 @@
             <div class="space-y-4 px-5 py-5">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Application Name</label>
-                    <input id="application_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter application name" />
+                    <input id="application_name" name="application_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter application name" />
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Owner</label>
-                        <input id="application_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
+                        <input id="application_owner" name="application_owner" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter owner" />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-slate-700">Version</label>
-                        <input id="application_version" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter version" />
+                        <input id="application_version" name="application_version" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Enter version" />
                     </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                    <textarea id="application_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
+                    <textarea id="application_description" name="application_description" rows="4" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400" placeholder="Add description"></textarea>
                 </div>
+                @csrf
+                <input type="hidden" id="application_id" name="application_id" value="" />
+                <input type="hidden" id="application_form_method" name="_method" value="POST" />
+                <input type="hidden" id="application_created_at" name="created_at" value="" />
+                <input type="hidden" id="application_updated_at" name="updated_at" value="" />
                 <div class="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                     <button type="button" onclick="closeApplicationMasterModal()" class="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
-                    <button type="button" onclick="saveApplicationEntry()" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="application-modal-submit">Save</button>
+                    <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700" id="application-modal-submit">Save</button>
                 </div>
             </div>
+            </form>
         </div>
     </div>
 
     <script>
+        function currentTimestamp() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function openApplicationMasterModal() {
             document.getElementById('application-modal-title').textContent = 'Add Application';
+            document.getElementById('application-master-form').action = '{{ route('application.master.store') }}';
+            document.getElementById('application_form_method').value = 'POST';
+            document.getElementById('application_id').value = '';
             document.getElementById('application_name').value = '';
             document.getElementById('application_owner').value = '';
             document.getElementById('application_version').value = '';
             document.getElementById('application_description').value = '';
+            const now = currentTimestamp();
+            const ca = document.getElementById('application_created_at');
+            const ua = document.getElementById('application_updated_at');
+            if (ca) ca.value = now;
+            if (ua) ua.value = now;
             document.getElementById('application-modal-submit').textContent = 'Save';
             document.getElementById('application-master-modal').classList.remove('hidden');
         }
@@ -133,10 +153,16 @@
 
         function editApplication(data) {
             document.getElementById('application-modal-title').textContent = 'Edit Application';
+            document.getElementById('application-master-form').action = '{{ url('/application-master') }}' + '/' + (data.applicationId || '');
+            document.getElementById('application_form_method').value = 'PUT';
+            document.getElementById('application_id').value = data.applicationId || '';
             document.getElementById('application_name').value = data.appName || '';
             document.getElementById('application_owner').value = data.owner || '';
             document.getElementById('application_version').value = data.version || '';
             document.getElementById('application_description').value = '';
+            const now = currentTimestamp();
+            const ua = document.getElementById('application_updated_at');
+            if (ua) ua.value = now;
             document.getElementById('application-modal-submit').textContent = 'Update';
             document.getElementById('application-master-modal').classList.remove('hidden');
         }

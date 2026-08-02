@@ -98,12 +98,15 @@
 
     <div id="state-master-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 px-4 py-8">
         <div class="mx-auto flex max-w-2xl flex-col rounded-3xl bg-white shadow-2xl">
-            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                 <div>
                     <h3 id="state-modal-title" class="text-lg font-semibold text-slate-900">Add State</h3>
                     <p class="text-sm text-slate-600">Create or update a state entry in the master list.</p>
                 </div>
                     <button type="button" onclick="closeStateMasterModal()" class="rounded-full p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                <form id="state-master-form" method="POST" action="">
                 @csrf
                 <input type="hidden" id="state_id" name="state_id" value="" />
                 <input type="hidden" id="state_form_method" name="_method" value="POST" />
