@@ -37,6 +37,29 @@ class Vendor extends Model
         'is_active' => 'boolean',
     ];
 
+    public function getContactPersonAttribute()
+    {
+        return $this->attributes['contact_person']
+            ?? $this->attributes['Contact Person']
+            ?? $this->attributes['primary_contact_name']
+            ?? null;
+    }
+
+    public function setContactPersonAttribute($value)
+    {
+        $this->attributes['Contact Person'] = $value;
+    }
+
+    public function getCategoryAttribute()
+    {
+        return $this->attributes['vendor_category'] ?? null;
+    }
+
+    public function setCategoryAttribute($value)
+    {
+        $this->attributes['vendor_category'] = $value;
+    }
+
     public function users()
     {
         return $this->hasMany(User::class,'vendor_id','vendor_id');

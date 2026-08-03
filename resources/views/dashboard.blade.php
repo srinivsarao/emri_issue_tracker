@@ -1,6 +1,6 @@
 ﻿<x-app-layout>
-    <main class="min-h-screen bg-slate-100 p-5">
-                    <div class="flex h-full flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm">
+    <main class="min-h-screen bg-slate-100 p-0">
+                    <div class="flex h-full flex-col overflow-hidden border border-slate-200 bg-white shadow-sm">
                         <div class="flex flex-1 flex-col overflow-hidden">
                             <div class="border-b border-slate-200 px-5 py-4">
                                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -16,7 +16,7 @@
                                 </div>
                             </div>
 
-                            <div class="flex-1 overflow-hidden px-5 py-5">
+                            <div class="flex-1 overflow-hidden px-2 py-2">
                                 <div class="grid gap-3 xl:grid-cols-6">
                                     @php
                                         $cards = [
@@ -92,16 +92,25 @@
                                             <p class="text-sm font-semibold text-slate-900">State-wise Analysis</p>
                                             <a href="#" class="text-xs font-semibold text-slate-500">View all</a>
                                         </div>
-                                        <div class="mt-4 space-y-3 text-[11px] text-slate-700">
-                                            @foreach([['Telangana','1,120','920','120','82%'],['Andhra Pradesh','740','560','110','76%'],['Odisha','430','340','70','79%'],['Karnataka','290','210','50','72%'],['Chhattisgarh','180','140','35','78%']] as $row)
-                                                <div class="grid grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
-                                                    <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
-                                                    <span>{{ $row[1] }}</span>
-                                                    <span>{{ $row[2] }}</span>
-                                                    <span>{{ $row[3] }}</span>
-                                                    <span>{{ $row[4] }}</span>
-                                                </div>
-                                            @endforeach
+                                        <div class="mt-4 overflow-x-auto">
+                                            <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                                                <span>State</span>
+                                                <span>Issues</span>
+                                                <span>Open</span>
+                                                <span>Resolved</span>
+                                                <span>SLA</span>
+                                            </div>
+                                            <div class="mt-2 space-y-3 text-[11px] text-slate-700">
+                                                @foreach([['Telangana','1,120','920','120','82%'],['Andhra Pradesh','740','560','110','76%'],['Odisha','430','340','70','79%'],['Karnataka','290','210','50','72%'],['Chhattisgarh','180','140','35','78%']] as $row)
+                                                    <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
+                                                        <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
+                                                        <span>{{ $row[1] }}</span>
+                                                        <span>{{ $row[2] }}</span>
+                                                        <span>{{ $row[3] }}</span>
+                                                        <span>{{ $row[4] }}</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="rounded-[14px] border border-slate-200 bg-slate-50 p-4 shadow-sm">
@@ -109,16 +118,25 @@
                                             <p class="text-sm font-semibold text-slate-900">Service-wise Analysis</p>
                                             <a href="#" class="text-xs font-semibold text-slate-500">View all</a>
                                         </div>
-                                        <div class="mt-4 space-y-3 text-[11px] text-slate-700">
-                                            @foreach([['Connectivity','980','760','120','80%'],['Application','640','510','90','79%'],['Hardware','420','330','60','79%'],['Support','280','210','45','75%'],['Security','170','140','30','81%']] as $row)
-                                                <div class="grid grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
-                                                    <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
-                                                    <span>{{ $row[1] }}</span>
-                                                    <span>{{ $row[2] }}</span>
-                                                    <span>{{ $row[3] }}</span>
-                                                    <span>{{ $row[4] }}</span>
-                                                </div>
-                                            @endforeach
+                                        <div class="mt-4 overflow-x-auto">
+                                            <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                                                <span>Service</span>
+                                                <span>Issues</span>
+                                                <span>Open</span>
+                                                <span>Resolved</span>
+                                                <span>SLA</span>
+                                            </div>
+                                            <div class="mt-2 space-y-3 text-[11px] text-slate-700">
+                                                @foreach([['Connectivity','980','760','120','80%'],['Application','640','510','90','79%'],['Hardware','420','330','60','79%'],['Support','280','210','45','75%'],['Security','170','140','30','81%']] as $row)
+                                                    <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
+                                                        <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
+                                                        <span>{{ $row[1] }}</span>
+                                                        <span>{{ $row[2] }}</span>
+                                                        <span>{{ $row[3] }}</span>
+                                                        <span>{{ $row[4] }}</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="rounded-[14px] border border-slate-200 bg-slate-50 p-4 shadow-sm">
@@ -126,22 +144,31 @@
                                             <p class="text-sm font-semibold text-slate-900">Vendor Performance</p>
                                             <a href="#" class="text-xs font-semibold text-slate-500">View all</a>
                                         </div>
-                                        <div class="mt-4 space-y-3 text-[11px] text-slate-700">
-                                            @foreach([['Vendor A','310','250','40','81%'],['Vendor B','220','180','30','78%'],['Vendor C','150','120','25','80%'],['Vendor D','110','82','18','74%'],['Vendor E','95','74','15','78%']] as $row)
-                                                <div class="grid grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
-                                                    <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
-                                                    <span>{{ $row[1] }}</span>
-                                                    <span>{{ $row[2] }}</span>
-                                                    <span>{{ $row[3] }}</span>
-                                                    <span>{{ $row[4] }}</span>
-                                                </div>
-                                            @endforeach
+                                        <div class="mt-4 overflow-x-auto">
+                                            <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                                                <span>Vendor</span>
+                                                <span>Issues</span>
+                                                <span>Open</span>
+                                                <span>Resolved</span>
+                                                <span>SLA</span>
+                                            </div>
+                                            <div class="mt-2 space-y-3 text-[11px] text-slate-700">
+                                                @foreach([['Vendor A','310','250','40','81%'],['Vendor B','220','180','30','78%'],['Vendor C','150','120','25','80%'],['Vendor D','110','82','18','74%'],['Vendor E','95','74','15','78%']] as $row)
+                                                    <div class="grid min-w-[600px] grid-cols-[1.3fr_0.8fr_0.7fr_0.7fr_0.6fr] gap-2 text-slate-600">
+                                                        <span class="font-semibold text-slate-900">{{ $row[0] }}</span>
+                                                        <span>{{ $row[1] }}</span>
+                                                        <span>{{ $row[2] }}</span>
+                                                        <span>{{ $row[3] }}</span>
+                                                        <span>{{ $row[4] }}</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="mt-3 grid flex-1 gap-3 xl:grid-cols-[1.65fr_0.9fr] overflow-hidden">
-                                    <div class="flex flex-col rounded-[14px] border border-slate-200 bg-slate-50 shadow-sm">
+                                <div class="mt-3 flex flex-col gap-3 xl:flex-row">
+                                    <div class="flex-1 min-w-0 flex flex-col rounded-[14px] border border-slate-200 bg-slate-50 shadow-sm">
                                         <div class="flex items-center justify-between border-b border-slate-200 px-4 py-4">
                                             <div>
                                                 <p class="text-sm font-semibold text-slate-900">Detailed Issue Report</p>
@@ -160,9 +187,9 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="flex-1 overflow-hidden px-4 pb-4">
-                                            <div class="h-[330px] overflow-hidden rounded-b-[14px]">
-                                                <table class="min-w-full table-fixed text-left text-[11px] text-slate-700">
+                                        <div class="px-4 pb-4">
+                                            <div class="overflow-x-auto overflow-y-auto rounded-b-[14px]">
+                                                <table class="min-w-[1400px] w-full text-left text-[11px] text-slate-700">
                                                     <thead class="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-[0.24em] text-slate-500">
                                                         <tr>
                                                             <th class="w-[8%] px-3 py-2">Ticket</th>
@@ -223,7 +250,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex flex-col gap-3">
+                                    <div class="flex w-full xl:w-[360px] min-h-0 flex-col gap-3">
                                         <div class="rounded-[14px] border border-slate-200 bg-slate-50 p-4 shadow-sm">
                                             <div class="flex items-center justify-between">
                                                 <div>

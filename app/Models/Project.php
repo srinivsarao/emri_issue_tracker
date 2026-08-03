@@ -18,6 +18,7 @@ class Project extends Model
     protected $fillable = [
         'state_id',
         'project_code',
+        'short_code',
         'project_name',
         'project_description',
         'start_date',

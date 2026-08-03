@@ -63,19 +63,13 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [       
+    protected $fillable = [
         'employee_code',
         'user_name',
         'login_id',
-        'email_id',
+        'official_email',
         'mobile_number',
-        'password_hash',
         'organisation_id',
-        'state_id',
-        'vendor_id',
-        'designation',
-        'is_active',
-        'is_locked',
         'user_status',
         'last_login_at',
         'password_changed_at',
@@ -108,9 +102,6 @@ class User extends Authenticatable
     protected $casts = [
         'last_login_at' => 'datetime',
         'password_changed_at' => 'datetime',
-        'is_active' => 'boolean',
-        'is_locked' => 'boolean',
-        'locked_until' => 'datetime',
     ];
 
     /**
@@ -141,7 +132,7 @@ class User extends Authenticatable
             'map_user_role',
             'user_id',
             'role_id'
-        )->wherePivot('is_active', 1);
+        );
     }
 
     public function getRoleNamesAttribute(): string
@@ -195,54 +186,5 @@ class User extends Authenticatable
         return $this->roles->contains(function (Role $role) use ($roleName) {
             return strtolower($role->role_name) === strtolower($roleName);
         });
-    }
-
-
-
-
-     public function organisation()
-    {
-        return $this->belongsTo(
-            Organisation::class,
-            'organisation_id',
-            'organisation_id'
-        );
-    }
-
-    public function state()
-    {
-        return $this->belongsTo(
-            State::class,
-            'state_id',
-            'state_id'
-        );
-    }
-
-    public function vendor()
-    {
-        return $this->belongsTo(
-            Vendor::class,
-            'vendor_id',
-            'vendor_id');
-    }
-
-    public function projects()
-    {
-        return $this->belongsToMany(
-            Project::class,
-            'map_user_project',
-            'user_id',
-            'project_id'
-        )->wherePivot('is_active', 1);
-    }
-
-    public function supportGroups()
-    {
-        return $this->belongsToMany(
-            SupportGroup::class,
-            'map_support_group_user',
-            'user_id',
-            'support_group_id'
-        )->wherePivot('is_active', 1);
     }
 }
